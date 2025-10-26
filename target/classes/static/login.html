@@ -1,0 +1,72 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Login</title>
+  
+<!-- Tailwind vía CDN para prototipado rápido -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./css/styles.css">
+<header class="border-b bg-white">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="./index.html" class="text-xl font-semibold">Sistema de Turnos y Marcaciones</a>
+    <nav class="flex gap-4 items-center">
+      <a href="./turnos.html" class="hover:underline">Turnos</a>
+      <a href="./marcaciones.html" class="hover:underline">Marcaciones</a>
+      <a href="./login.html" id="navLogin" class="hover:underline">Login</a>
+      <button id="btnLogout" class="hidden text-sm px-3 py-1 border rounded">Salir</button>
+    </nav>
+  </div>
+</header>
+
+</head>
+<body class="bg-gray-50">
+  <main class="max-w-md mx-auto px-4 py-10">
+    <h1 class="text-2xl font-semibold mb-6">Iniciar sesión</h1>
+    <form id="formLogin" class="bg-white p-6 rounded-xl shadow space-y-4">
+      <div>
+        <label class="block text-sm text-gray-700">Usuario</label>
+        <input id="username" class="mt-1 w-full border rounded px-3 py-2" placeholder="usuario"/>
+      </div>
+      <div>
+        <label class="block text-sm text-gray-700">Contraseña</label>
+        <input id="password" type="password" class="mt-1 w-full border rounded px-3 py-2" placeholder="••••••••"/>
+      </div>
+      <button id="btnLogin" class="w-full bg-blue-600 text-white rounded px-3 py-2">Ingresar</button>
+    </form>
+  </main>
+
+  <script type="module">
+    import { api } from './js/api.js';
+    import { $, toast, setLoading } from './js/ui.js';
+
+    const form = $('#formLogin');
+    const btn = $('#btnLogin');
+
+    form.addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      try {
+        setLoading(btn, true);
+        const username = $('#username').value.trim();
+        const password = $('#password').value.trim();
+        const data = await api.login(username, password);
+        // Se asume que la respuesta contiene { token: '...' }
+        if (data?.token) {
+          localStorage.setItem('token', data.token);
+          toast('Login exitoso', 'success');
+          location.href = './index.html';
+        } else {
+          toast('No se recibió token. Ajusta el login según tu API.', 'error');
+        }
+      } catch(err) {
+        console.error(err);
+        toast('Credenciales inválidas o error de servidor', 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+  </script>
+</body>
+</html>

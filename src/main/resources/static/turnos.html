@@ -1,0 +1,167 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Turnos</title>
+  
+<!-- Tailwind vía CDN para prototipado rápido -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./css/styles.css">
+<header class="border-b bg-white">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="./index.html" class="text-xl font-semibold">Sistema de Turnos y Marcaciones</a>
+    <nav class="flex gap-4 items-center">
+      <a href="./turnos.html" class="hover:underline">Turnos</a>
+      <a href="./marcaciones.html" class="hover:underline">Marcaciones</a>
+      <a href="./login.html" id="navLogin" class="hover:underline">Login</a>
+      <button id="btnLogout" class="hidden text-sm px-3 py-1 border rounded">Salir</button>
+    </nav>
+  </div>
+</header>
+
+</head>
+<body class="bg-gray-50">
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-semibold">Turnos</h1>
+      <button id="btnNuevo" class="bg-blue-600 text-white px-3 py-2 rounded">Nuevo turno</button>
+    </div>
+
+    <section class="bg-white p-4 rounded-xl shadow">
+      <div id="tableHost" class="overflow-auto"></div>
+      <div class="flex items-center gap-2 mt-4">
+        <button id="prev" class="px-3 py-1 border rounded">Anterior</button>
+        <span id="pageInfo" class="text-sm text-gray-600"></span>
+        <button id="next" class="px-3 py-1 border rounded">Siguiente</button>
+      </div>
+    </section>
+
+    <dialog id="dlgTurno" class="rounded-xl p-0 w-full max-w-lg">
+      <form id="formTurno" class="p-6 space-y-3">
+        <h2 class="text-lg font-medium">Turno</h2>
+        <input type="hidden" id="turnoId" />
+        <div>
+          <label class="block text-sm text-gray-700">Código</label>
+          <input id="codigo" class="mt-1 w-full border rounded px-3 py-2"/>
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-gray-700">Inicio</label>
+            <input id="inicio" type="time" class="mt-1 w-full border rounded px-3 py-2"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700">Fin</label>
+            <input id="fin" type="time" class="mt-1 w-full border rounded px-3 py-2"/>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancel" class="px-3 py-2 border rounded">Cancelar</button>
+          <button id="btnSave" class="px-3 py-2 bg-blue-600 text-white rounded">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+
+  <script type="module">
+    import { api } from './js/api.js';
+    import { $, toast, renderTable, setLoading } from './js/ui.js';
+
+    // Auth guard (opcional)
+    const token = localStorage.getItem('token');
+    if (!token) { /*location.href = './login.html';*/ }
+
+    let page = 0, size = 10, totalPages = 1;
+
+    async function load() {
+      try {
+        const data = await api.listTurnos(page, size);
+        // Se asume respuesta tipo Spring Page: { content, totalPages }
+        const rows = data?.content ?? data ?? [];
+        totalPages = data?.totalPages ?? 1;
+        renderTable($('#tableHost'), [
+          { header: 'ID', accessor: 'id' },
+          { header: 'Código', accessor: 'codigo' },
+          { header: 'Inicio', accessor: 'inicio' },
+          { header: 'Fin', accessor: 'fin' },
+          { header: 'Acciones', cell: (r)=>`
+            <button data-id="${r.id}" class="btn-edit text-blue-600">Editar</button>
+            <button data-id="${r.id}" class="btn-del text-red-600 ml-2">Eliminar</button>` }
+        ], rows);
+
+        $('#pageInfo').textContent = `Página ${page+1} de ${totalPages}`;
+
+        // Bind acciones
+        document.querySelectorAll('.btn-edit').forEach(b => b.addEventListener('click', () => edit(b.dataset.id)));
+        document.querySelectorAll('.btn-del').forEach(b => b.addEventListener('click', () => removeItem(b.dataset.id)));
+      } catch(err) {
+        console.error(err);
+        toast('Error cargando turnos', 'error');
+      }
+    }
+
+    async function edit(id) {
+      // Aquí podrías pedir /api/turnos/{id} si existe, por simplicidad cargamos fila visible.
+      $('#turnoId').value = id;
+      $('#codigo').value = '';
+      $('#inicio').value = '';
+      $('#fin').value = '';
+      $('#dlgTurno').showModal();
+    }
+
+    async function removeItem(id) {
+      if (!confirm('¿Eliminar turno?')) return;
+      try {
+        await api.deleteTurno(id);
+        toast('Eliminado', 'success');
+        await load();
+      } catch(err) {
+        console.error(err);
+        toast('No se pudo eliminar', 'error');
+      }
+    }
+
+    // Nuevo
+    $('#btnNuevo').addEventListener('click', () => {
+      $('#turnoId').value = '';
+      $('#codigo').value = '';
+      $('#inicio').value = '';
+      $('#fin').value = '';
+      $('#dlgTurno').showModal();
+    });
+
+    // Guardar
+    $('#formTurno').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const payload = {
+        codigo: $('#codigo').value.trim(),
+        inicio: $('#inicio').value,
+        fin: $('#fin').value
+      };
+      const btn = $('#btnSave');
+      try {
+        setLoading(btn, true);
+        const id = $('#turnoId').value;
+        if (id) await api.updateTurno(id, payload);
+        else await api.createTurno(payload);
+        toast('Guardado', 'success');
+        $('#dlgTurno').close();
+        await load();
+      } catch(err) {
+        console.error(err);
+        toast('No se pudo guardar', 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+    $('#btnCancel').addEventListener('click', ()=> $('#dlgTurno').close());
+
+    // Paginación
+    $('#prev').addEventListener('click', ()=>{ if (page>0) { page--; load(); } });
+    $('#next').addEventListener('click', ()=>{ if (page<totalPages-1) { page++; load(); } });
+
+    load();
+  </script>
+</body>
+</html>

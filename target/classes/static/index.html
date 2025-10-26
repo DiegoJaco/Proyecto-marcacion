@@ -1,0 +1,53 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Dashboard – Turnos & Marcaciones</title>
+  
+<!-- Tailwind vía CDN para prototipado rápido -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./css/styles.css">
+<header class="border-b bg-white">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="./index.html" class="text-xl font-semibold">Sistema de Turnos y Marcaciones</a>
+    <nav class="flex gap-4 items-center">
+      <a href="./turnos.html" class="hover:underline">Turnos</a>
+      <a href="./marcaciones.html" class="hover:underline">Marcaciones</a>
+      <a href="./login.html" id="navLogin" class="hover:underline">Login</a>
+      <button id="btnLogout" class="hidden text-sm px-3 py-1 border rounded">Salir</button>
+    </nav>
+  </div>
+</header>
+
+</head>
+<body class="bg-gray-50">
+  <main class="max-w-6xl mx-auto px-4 py-6">
+    <h1 class="text-2xl font-semibold mb-4">Dashboard</h1>
+    <div class="grid md:grid-cols-3 gap-4">
+      <a href="./turnos.html" class="block p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <h2 class="font-medium mb-1">Gestión de Turnos</h2>
+        <p class="text-sm text-gray-600">Crear, editar y listar turnos con paginación.</p>
+      </a>
+      <a href="./marcaciones.html" class="block p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <h2 class="font-medium mb-1">Marcaciones</h2>
+        <p class="text-sm text-gray-600">Registrar, editar y listar marcaciones.</p>
+      </a>
+      <a href="./login.html" class="block p-4 bg-white rounded-xl shadow hover:shadow-md transition">
+        <h2 class="font-medium mb-1">Autenticación</h2>
+        <p class="text-sm text-gray-600">Inicia sesión para acceder a funciones protegidas.</p>
+      </a>
+    </div>
+  </main>
+
+  <script type="module">
+    import { $ } from './js/ui.js';
+    const token = localStorage.getItem('token');
+    const btnLogout = $('#btnLogout');
+    const navLogin = $('#navLogin');
+    if (token) { btnLogout.classList.remove('hidden'); navLogin.classList.add('hidden'); }
+    btnLogout?.addEventListener('click', ()=>{ localStorage.removeItem('token'); location.href='./login.html'; });
+  </script>
+</body>
+</html>

@@ -1,0 +1,125 @@
+
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Marcaciones</title>
+  
+<!-- Tailwind vía CDN para prototipado rápido -->
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="./css/styles.css">
+<header class="border-b bg-white">
+  <div class="max-w-6xl mx-auto px-4 py-3 flex items-center justify-between">
+    <a href="./index.html" class="text-xl font-semibold">Sistema de Turnos y Marcaciones</a>
+    <nav class="flex gap-4 items-center">
+      <a href="./turnos.html" class="hover:underline">Turnos</a>
+      <a href="./marcaciones.html" class="hover:underline">Marcaciones</a>
+      <a href="./login.html" id="navLogin" class="hover:underline">Login</a>
+      <button id="btnLogout" class="hidden text-sm px-3 py-1 border rounded">Salir</button>
+    </nav>
+  </div>
+</header>
+
+</head>
+<body class="bg-gray-50">
+  <main class="max-w-6xl mx-auto px-4 py-6 space-y-6">
+    <div class="flex items-center justify-between">
+      <h1 class="text-2xl font-semibold">Marcaciones</h1>
+      <button id="btnNueva" class="bg-blue-600 text-white px-3 py-2 rounded">Nueva marcación</button>
+    </div>
+
+    <section class="bg-white p-4 rounded-xl shadow">
+      <div id="tableHost" class="overflow-auto"></div>
+    </section>
+
+    <dialog id="dlgMarc" class="rounded-xl p-0 w-full max-w-lg">
+      <form id="formMarc" class="p-6 space-y-3">
+        <h2 class="text-lg font-medium">Marcación</h2>
+        <input type="hidden" id="marcId" />
+        <div class="grid md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-gray-700">Colaborador</label>
+            <input id="colaborador" class="mt-1 w-full border rounded px-3 py-2"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700">Tipo</label>
+            <select id="tipo" class="mt-1 w-full border rounded px-3 py-2">
+              <option value="ENTRADA">ENTRADA</option>
+              <option value="SALIDA">SALIDA</option>
+              <option value="REFRIGERIO_IN">REFRIGERIO_IN</option>
+              <option value="REFRIGERIO_OUT">REFRIGERIO_OUT</option>
+            </select>
+          </div>
+        </div>
+        <div class="grid md:grid-cols-2 gap-3">
+          <div>
+            <label class="block text-sm text-gray-700">Fecha</label>
+            <input id="fecha" type="date" class="mt-1 w-full border rounded px-3 py-2"/>
+          </div>
+          <div>
+            <label class="block text-sm text-gray-700">Hora</label>
+            <input id="hora" type="time" class="mt-1 w-full border rounded px-3 py-2"/>
+          </div>
+        </div>
+        <div class="flex justify-end gap-2 pt-2">
+          <button type="button" id="btnCancel" class="px-3 py-2 border rounded">Cancelar</button>
+          <button id="btnSave" class="px-3 py-2 bg-blue-600 text-white rounded">Guardar</button>
+        </div>
+      </form>
+    </dialog>
+  </main>
+
+  <script type="module">
+    import { api } from './js/api.js';
+    import { $, toast, renderTable, setLoading } from './js/ui.js';
+
+    async function load() {
+      try {
+        const data = await api.listMarcaciones(0, 50);
+        const rows = data?.content ?? data ?? [];
+        renderTable($('#tableHost'), [
+          { header: 'ID', accessor: 'id' },
+          { header: 'Colaborador', accessor: 'colaborador' },
+          { header: 'Tipo', accessor: 'tipo' },
+          { header: 'Fecha', accessor: 'fecha' },
+          { header: 'Hora', accessor: 'hora' },
+        ], rows);
+      } catch(err) {
+        console.error(err);
+        toast('Error cargando marcaciones', 'error');
+      }
+    }
+
+    $('#btnNueva').addEventListener('click', () => { $('#marcId').value=''; $('#dlgMarc').showModal(); });
+    $('#btnCancel').addEventListener('click', () => $('#dlgMarc').close());
+
+    $('#formMarc').addEventListener('submit', async (e)=>{
+      e.preventDefault();
+      const payload = {
+        colaborador: $('#colaborador').value.trim(),
+        tipo: $('#tipo').value,
+        fecha: $('#fecha').value,
+        hora: $('#hora').value
+      };
+      const btn = $('#btnSave');
+      try {
+        setLoading(btn, true);
+        const id = $('#marcId').value;
+        if (id) await api.updateMarcacion(id, payload);
+        else await api.createMarcacion(payload);
+        toast('Guardado', 'success');
+        $('#dlgMarc').close();
+        await load();
+      } catch(err) {
+        console.error(err);
+        toast('No se pudo guardar', 'error');
+      } finally {
+        setLoading(btn, false);
+      }
+    });
+
+    load();
+  </script>
+</body>
+</html>
